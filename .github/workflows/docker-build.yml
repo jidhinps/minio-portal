@@ -1,0 +1,45 @@
+name: Docker CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    services:
+      docker:
+        image: docker:20.10.16
+        options: --privileged
+        ports:
+          - 2375:2375
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Set up Docker cache
+        uses: actions/cache@v4
+        with:
+          path: /tmp/.buildx-cache
+          key: ${{ runner.os }}-docker-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-docker-
+
+      - name: Build backend image
+        run: docker build -t backend-test ./backend
+
+      - name: Build frontend image
+        run: docker build -t frontend-test ./frontend
+
+      - name: Build celery image
+        run: docker build -t celery-test ./backend
+
+      - name: Docker Compose test
+        run: docker compose -f docker-compose.yml config
